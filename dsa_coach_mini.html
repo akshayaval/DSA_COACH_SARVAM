@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DSA Coach</title>
+  <style>
+    :root {
+      --bg:        #0a0a0a;
+      --surface:   #141414;
+      --surface2:  #1e1e1e;
+      --border:    #2a2a2a;
+      --text:      #f5f5f5;
+      --muted:     #6b7280;
+      --blue:      #2563eb;
+      --blue-hover:#1d4ed8;
+      --green:     #16a34a;
+      --yellow:    #ca8a04;
+      --red:       #dc2626;
+      --locked-bg: #111111;
+      --locked-text: #374151;
+      --radius:    8px;
+      --font:      system-ui, -apple-system, sans-serif;
+      --mono:      'Courier New', monospace;
+    }
+
+    body { background: var(--bg); color: var(--text); font-family: var(--font); margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow-x: hidden; }
+
+    /* Header */
+    header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg); }
+    header h1 { margin: 0; font-size: 1.5rem; color: white; }
+    
+    .problem-bar { display: none; align-items: center; gap: 12px; }
+    .problem-bar.active { display: flex; }
+    .problem-bar h2 { margin: 0; font-size: 1.25rem; }
+    .back-btn { color: var(--muted); cursor: pointer; text-decoration: none; font-size: 0.9rem; }
+    .back-btn:hover { color: var(--text); }
+
+    /* Language pills */
+    .lang-toggle { display: flex; gap: 4px; }
+    .lang-pill {
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 0.8rem;
+      background: var(--surface2);
+      color: var(--muted);
+    }
+    .lang-pill.active {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+
+    /* Difficulty badges */
+    .badge { padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+    .badge-topic { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+    .badge-easy   { background: #14532d; color: #4ade80; }
+    .badge-medium { background: #713f12; color: #fbbf24; }
+    
+    /* Main Content Area */
+    main { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+
+    /* Screens */
+    .screen { display: none; flex-direction: column; gap: 24px; height: 100%; }
+    .screen.active { display: flex; }
+
+    /* Screen 1: Select */
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; cursor: pointer; transition: border-color 0.2s; }
+    .card:hover { border-color: var(--muted); }
+    .card h3 { margin: 0 0 12px 0; font-size: 1.25rem; }
+    .card-badges { display: flex; gap: 8px; margin-bottom: 12px; }
+    .card p { margin: 0; color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+
+    /* Screen 2 & 3 shared elements */
+    .problem-desc { background: var(--surface); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); }
+    .problem-desc p { margin: 0 0 16px 0; line-height: 1.6; }
+    .examples { background: var(--surface2); padding: 12px; border-radius: var(--radius); font-family: var(--mono); font-size: 0.85rem; }
+    .example-item { margin-bottom: 12px; }
+    .example-item:last-child { margin-bottom: 0; }
+    .example-label { color: var(--muted); margin-bottom: 4px; display: block; }
+    .example-val { color: var(--text); }
+
+    /* Type vs Speak */
+    .input-toggles { display: flex; gap: 8px; margin-bottom: 8px; }
+    .toggle-btn { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 12px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; }
+    .toggle-btn.active { background: var(--surface); color: var(--text); border-color: var(--muted); }
+    
+    .pseudocode-area { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+    textarea { width: 100%; box-sizing: border-box; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; font-family: var(--font); font-size: 1rem; resize: vertical; min-height: 150px; outline: none; }
+    textarea:focus { border-color: var(--blue); }
+    .code-textarea { font-family: var(--mono); line-height: 1.5; min-height: 300px; flex: 1; }
+
+    .speak-area { display: none; flex-direction: column; align-items: center; justify-content: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 40px; min-height: 150px; gap: 16px; }
+    .speak-area.active { display: flex; }
+    
+    .mic-btn { width: 80px; height: 80px; border-radius: 50%; border: none; background: var(--surface2); font-size: 2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; color: white; }
+    .mic-btn:hover { background: var(--border); }
+    
+    /* Recording pulse */
+    @keyframes pulse-red {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.7); }
+      50%       { box-shadow: 0 0 0 10px rgba(220,38,38,0); }
+    }
+    .recording { animation: pulse-red 1s infinite; background: var(--red) !important; }
+
+    /* Timer section */
+    .timer-section { display: flex; flex-direction: column; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; gap: 16px; }
+    .timer-section h3 { margin: 0; font-size: 1.5rem; }
+    .timer-subtext { color: var(--muted); margin: 0; }
+    .timer-display {
+      font-size: 5rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--blue);
+      text-align: center;
+      letter-spacing: 0.05em;
+      margin: 0;
+      line-height: 1;
+    }
+
+    /* Blue button */
+    .btn-blue {
+      background: var(--blue); color: white;
+      border: none; border-radius: var(--radius);
+      padding: 10px 20px; cursor: pointer; font-size: 1rem;
+      transition: background 0.15s;
+      font-weight: 600;
+      display: flex; justify-content: center; align-items: center; gap: 8px;
+    }
+    .btn-blue:hover { background: var(--blue-hover); }
+    .btn-blue:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .btn-full { width: 100%; }
+
+    /* Solving screen layout */
+    .solving-layout { display: flex; gap: 24px; flex: 1; min-height: 0; }
+    .panel { flex: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; }
+    .panel-header h3 { margin: 0; font-size: 1.25rem; }
+
+    /* Locked panel overlay */
+    .panel-locked {
+      pointer-events: none;
+      opacity: 0.35;
+      filter: grayscale(1);
+      position: relative;
+    }
+    .panel-locked::after {
+      content: "🔒";
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 3rem;
+      opacity: 1;
+      filter: none;
+    }
+
+    /* Accordion / Hints */
+    .accordion { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+    .accordion-header { padding: 12px 16px; background: var(--surface2); cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; user-select: none; }
+    .accordion-header:hover { background: var(--border); }
+    .accordion-content { padding: 16px; border-top: 1px solid var(--border); display: none; line-height: 1.6; white-space: pre-wrap; }
+    .accordion-content.open { display: block; }
+    
+    .hint-card { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+    .hint-header-wrap { display: flex; justify-content: space-between; align-items: center; background: var(--surface2); border-bottom: 1px solid transparent; }
+    .hint-header-wrap.open { border-bottom-color: var(--border); }
+    .hint-header { flex: 1; padding: 12px 16px; cursor: pointer; font-weight: 600; user-select: none; display: flex; justify-content: space-between; }
+    .hint-header:hover { background: var(--border); }
+    .listen-btn { padding: 8px 16px; background: transparent; border: none; border-left: 1px solid var(--border); color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .listen-btn:hover { background: var(--border); }
+    .listen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .hint-content { padding: 16px; display: none; line-height: 1.6; white-space: pre-wrap; }
+    .hint-content.open { display: block; }
+
+    /* Review Result */
+    .review-result { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; font-size: 0.95rem; }
+    .review-section { margin-bottom: 16px; }
+    .review-section:last-child { margin-bottom: 0; }
+    .review-title { font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .review-text { color: var(--text); line-height: 1.5; margin: 0; }
+    .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+    /* Utilities */
+    .spinner { border: 2px solid rgba(255,255,255,0.1); border-top: 2px solid white; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div id="header-brand">
+      <h1>DSA Coach</h1>
+    </div>
+    <div id="header-problem" class="problem-bar">
+      <a href="#" class="back-btn" onclick="resetToSelect()">← Back</a>
+      <h2 id="top-title">Title</h2>
+      <span id="top-topic" class="badge badge-topic">Topic</span>
+      <span id="top-diff" class="badge">Diff</span>
+    </div>
+    <div class="lang-toggle" id="global-lang-toggle">
+      <!-- Injected by JS -->
+    </div>
+  </header>
+
+  <main>
+    <!-- Screen 1: Select -->
+    <div id="screen-select" class="screen active">
+      <div class="cards-grid" id="problem-list">
+        <!-- Injected by JS -->
+      </div>
+    </div>
+
+    <!-- Screen 2: Thinking -->
+    <div id="screen-thinking" class="screen">
+      <div class="problem-desc">
+        <p id="think-desc"></p>
+        <div class="examples" id="think-examples"></div>
+      </div>
+
+      <div style="display: flex; gap: 24px; flex: 1;">
+        <div class="pseudocode-area">
+          <div class="input-toggles">
+            <button class="toggle-btn active" id="btn-mode-type" onclick="setThinkMode('type')">✏️ Type</button>
+            <button class="toggle-btn" id="btn-mode-speak" onclick="setThinkMode('speak')">🎙️ Speak</button>
+          </div>
+          
+          <textarea id="pseudo-input" placeholder="Write your approach, pseudocode, or notes here..."></textarea>
+          
+          <div class="speak-area" id="speak-input">
+            <button class="mic-btn" id="mic-record-btn">🎙️</button>
+            <div id="mic-status" style="color: var(--muted);">Click to start recording</div>
+          </div>
+        </div>
+
+        <div class="timer-section">
+          <h3>Thinking Timer</h3>
+          <p class="timer-subtext">Coach and Code unlock when the timer ends</p>
+          <div class="timer-display" id="timer-val">00:30</div>
+          <button class="btn-blue" id="start-timer-btn" onclick="startTimer()">Start Timer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 3: Solving -->
+    <div id="screen-solving" class="screen">
+      <div class="accordion">
+        <div class="accordion-header" onclick="toggleAccordion('your-notes-content')">
+          Your Notes <span>▾</span>
+        </div>
+        <div class="accordion-content" id="your-notes-content"></div>
+      </div>
+
+      <div class="solving-layout">
+        <!-- Left Panel: Coach -->
+        <div class="panel" id="coach-panel">
+          <div class="panel-header">
+            <h3>Coach 🤖</h3>
+            <!-- Syncs with global lang toggle, but we just use the global one for simplicity, 
+                 or we can show it here if requested. The spec says synced with top bar. 
+                 We'll just rely on the global one in the header to save space and keep it clean,
+                 as it's "synced with top bar". -->
+          </div>
+          <div id="hints-container" style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- Hint 1 -->
+            <div class="hint-card">
+              <div class="hint-header-wrap" id="hint1-wrap">
+                <div class="hint-header" onclick="toggleHint(1)">
+                  <span>Level 1 — Concept</span> <span id="hint1-arrow">▾</span>
+                </div>
+                <button class="listen-btn" onclick="playHintAudio(1)" id="listen-btn-1">🔊 Listen</button>
+              </div>
+              <div class="hint-content" id="hint1-content"></div>
+            </div>
+            <!-- Hint 2 -->
+            <div class="hint-card">
+              <div class="hint-header-wrap" id="hint2-wrap">
+                <div class="hint-header" onclick="toggleHint(2)">
+                  <span>Level 2 — Direction</span> <span id="hint2-arrow">▾</span>
+                </div>
+                <button class="listen-btn" onclick="playHintAudio(2)" id="listen-btn-2">🔊 Listen</button>
+              </div>
+              <div class="hint-content" id="hint2-content"></div>
+            </div>
+            <!-- Hint 3 -->
+            <div class="hint-card">
+              <div class="hint-header-wrap" id="hint3-wrap">
+                <div class="hint-header" onclick="toggleHint(3)">
+                  <span>Level 3 — Pseudocode</span> <span id="hint3-arrow">▾</span>
+                </div>
+                <button class="listen-btn" onclick="playHintAudio(3)" id="listen-btn-3">🔊 Listen</button>
+              </div>
+              <div class="hint-content" id="hint3-content"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Code -->
+        <div class="panel" id="code-panel">
+          <div class="panel-header">
+            <h3>Code 💻</h3>
+          </div>
+          <textarea class="code-textarea" id="code-input" placeholder="Write or paste your solution here..."></textarea>
+          <button class="btn-blue btn-full" id="review-btn" onclick="reviewCode()">Check My Approach</button>
+          
+          <div id="review-output" class="hidden">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // --- API Configuration ---
+    const SARVAM_API_KEY = "YOUR_SARVAM_API_KEY";
+    const SARVAM_CHAT_URL = "https://api.sarvam.ai/v1/chat/completions";
+    const SARVAM_TTS_URL  = "https://api.sarvam.ai/text-to-speech";
+    const SARVAM_STT_URL  = "https://api.sarvam.ai/speech-to-text";
+    const SARVAM_MODEL    = "sarvam-m";
+    const SARVAM_TTS_MODEL = "bulbul:v3";
+
+    // --- Data ---
+    const PROBLEMS = [
+      {
+        id: "two-sum",
+        title: "Two Sum",
+        topic: "Array",
+        difficulty: "Easy",
+        description: "Given an array of integers and a target, return the indices of the two numbers that add up to the target. Assume exactly one solution exists.",
+        examples: [
+          { input: "nums = [2,7,11,15], target = 9", output: "[0,1]" },
+          { input: "nums = [3,2,4], target = 6",      output: "[1,2]" }
+        ]
+      },
+      {
+        id: "reverse-array",
+        title: "Reverse an Array",
+        topic: "Array",
+        difficulty: "Easy",
+        description: "Given an array, return it reversed in-place.",
+        examples: [
+          { input: "[1,2,3,4,5]", output: "[5,4,3,2,1]" },
+          { input: "[1]",          output: "[1]" }
+        ]
+      },
+      {
+        id: "reverse-linked-list",
+        title: "Reverse a Linked List",
+        topic: "Linked List",
+        difficulty: "Medium",
+        description: "Given the head of a singly linked list, reverse it and return the new head.",
+        examples: [
+          { input: "1→2→3→4→5", output: "5→4→3→2→1" },
+          { input: "1→2",         output: "2→1" }
+        ]
+      }
+    ];
+
+    const LANGUAGES = [
+      { code: "en-IN", label: "English", short: "EN" },
+      { code: "hi-IN", label: "हिंदी",   short: "HI" },
+      { code: "te-IN", label: "తెలుగు",  short: "TE" }
+    ];
+
+    const TIMER_SECONDS = 30;
+
+    // --- App State ---
+    let state = {
+      screen: "select",         // "select" | "thinking" | "solving"
+      problem: null,
+      language: LANGUAGES[0],
+      pseudocode: "",
+      timerRemaining: TIMER_SECONDS,
+      timerRunning: false,
+      timerDone: false,
+      hints: [null, null, null], // array of hint texts once fetched
+      hintsVisible: [false, false, false],
+      codeInput: "",
+      reviewResult: null,
+      isRecording: false,
+      mediaRecorder: null,
+      audioChunks: [],
+      timerInterval: null,
+      thinkMode: 'type' // 'type' | 'speak'
+    };
+
+    // --- DOM Elements ---
+    const els = {
+      globalLangToggle: document.getElementById('global-lang-toggle'),
+      headerBrand: document.getElementById('header-brand'),
+      headerProblem: document.getElementById('header-problem'),
+      topTitle: document.getElementById('top-title'),
+      topTopic: document.getElementById('top-topic'),
+      topDiff: document.getElementById('top-diff'),
+      screens: {
+        select: document.getElementById('screen-select'),
+        thinking: document.getElementById('screen-thinking'),
+        solving: document.getElementById('screen-solving')
+      },
+      problemList: document.getElementById('problem-list'),
+      thinkDesc: document.getElementById('think-desc'),
+      thinkExamples: document.getElementById('think-examples'),
+      pseudoInput: document.getElementById('pseudo-input'),
+      speakInputArea: document.getElementById('speak-input'),
+      btnModeType: document.getElementById('btn-mode-type'),
+      btnModeSpeak: document.getElementById('btn-mode-speak'),
+      timerVal: document.getElementById('timer-val'),
+      startTimerBtn: document.getElementById('start-timer-btn'),
+      coachPanel: document.getElementById('coach-panel'),
+      codePanel: document.getElementById('code-panel'),
+      yourNotesContent: document.getElementById('your-notes-content'),
+      codeInput: document.getElementById('code-input'),
+      reviewBtn: document.getElementById('review-btn'),
+      reviewOutput: document.getElementById('review-output'),
+      micRecordBtn: document.getElementById('mic-record-btn'),
+      micStatus: document.getElementById('mic-status')
+    };
+
+    // --- Initialization ---
+    function init() {
+      renderLangToggle();
+      renderProblemCards();
+      updateScreen();
+    }
+
+    // --- Render Functions ---
+    function renderLangToggle() {
+      els.globalLangToggle.innerHTML = LANGUAGES.map(lang => `
+        <div class="lang-pill ${state.language.code === lang.code ? 'active' : ''}" 
+             onclick="setLanguage('${lang.code}')">
+          ${lang.short}
+        </div>
+      `).join('');
+    }
+
+    function setLanguage(code) {
+      state.language = LANGUAGES.find(l => l.code === code);
+      renderLangToggle();
+      // If we are in solving screen, hints that are not yet fetched will fetch in new language.
+      // Already fetched hints won't change per spec rule 3.
+    }
+
+    function renderProblemCards() {
+      els.problemList.innerHTML = PROBLEMS.map(p => {
+        const diffClass = p.difficulty === 'Easy' ? 'badge-easy' : 'badge-medium';
+        return `
+          <div class="card" onclick="selectProblem('${p.id}')">
+            <h3>${p.title}</h3>
+            <div class="card-badges">
+              <span class="badge badge-topic">${p.topic}</span>
+              <span class="badge ${diffClass}">${p.difficulty}</span>
+            </div>
+            <p>${p.description.substring(0, 80)}...</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function selectProblem(id) {
+      state.problem = PROBLEMS.find(p => p.id === id);
+      state.screen = "thinking";
+      state.timerRemaining = TIMER_SECONDS;
+      state.timerDone = false;
+      state.timerRunning = false;
+      state.pseudocode = "";
+      state.hints = [null, null, null];
+      state.hintsVisible = [false, false, false];
+      state.codeInput = "";
+      state.reviewResult = null;
+      if(state.timerInterval) clearInterval(state.timerInterval);
+      
+      // Update UI elements for problem
+      els.topTitle.innerText = state.problem.title;
+      els.topTopic.innerText = state.problem.topic;
+      els.topDiff.innerText = state.problem.difficulty;
+      els.topDiff.className = `badge ${state.problem.difficulty === 'Easy' ? 'badge-easy' : 'badge-medium'}`;
+      
+      els.thinkDesc.innerText = state.problem.description;
+      els.thinkExamples.innerHTML = state.problem.examples.map(ex => `
+        <div class="example-item">
+          <span class="example-label">Input:</span>
+          <span class="example-val">${ex.input}</span>
+          <br>
+          <span class="example-label" style="margin-top:4px;">Output:</span>
+          <span class="example-val">${ex.output}</span>
+        </div>
+      `).join('');
+
+      els.pseudoInput.value = "";
+      els.timerVal.innerText = formatTime(TIMER_SECONDS);
+      els.startTimerBtn.style.display = "flex";
+      
+      // Reset hints UI
+      for(let i=1; i<=3; i++) {
+        document.getElementById(`hint${i}-content`).classList.remove('open');
+        document.getElementById(`hint${i}-wrap`).classList.remove('open');
+        document.getElementById(`hint${i}-arrow`).innerText = '▾';
+        document.getElementById(`hint${i}-content`).innerHTML = '';
+      }
+
+      // Reset code UI
+      els.codeInput.value = "";
+      els.reviewOutput.innerHTML = "";
+      els.reviewOutput.classList.add('hidden');
+      
+      setThinkMode('type');
+      updateScreen();
+    }
+
+    function resetToSelect() {
+      state.screen = "select";
+      state.problem = null;
+      if(state.timerInterval) clearInterval(state.timerInterval);
+      updateScreen();
+    }
+
+    function updateScreen() {
+      // Hide all screens
+      Object.values(els.screens).forEach(el => el.classList.remove('active'));
+      
+      if (state.screen === "select") {
+        els.headerBrand.style.display = "block";
+        els.headerProblem.classList.remove('active');
+        els.screens.select.classList.add('active');
+      } 
+      else if (state.screen === "thinking") {
+        els.headerBrand.style.display = "none";
+        els.headerProblem.classList.add('active');
+        els.screens.thinking.classList.add('active');
+      }
+      else if (state.screen === "solving") {
+        els.headerBrand.style.display = "none";
+        els.headerProblem.classList.add('active');
+        els.screens.solving.classList.add('active');
+        
+        // Sync pseudocode to notes
+        state.pseudocode = els.pseudoInput.value;
+        els.yourNotesContent.innerText = state.pseudocode || "No notes written.";
+        
+        // Handle locks
+        if (state.timerDone) {
+          els.coachPanel.classList.remove('panel-locked');
+          els.codePanel.classList.remove('panel-locked');
+        } else {
+          els.coachPanel.classList.add('panel-locked');
+          els.codePanel.classList.add('panel-locked');
+        }
+      }
+    }
+
+    function setThinkMode(mode) {
+      state.thinkMode = mode;
+      if (mode === 'type') {
+        els.btnModeType.classList.add('active');
+        els.btnModeSpeak.classList.remove('active');
+        els.pseudoInput.style.display = 'block';
+        els.speakInputArea.classList.remove('active');
+      } else {
+        els.btnModeType.classList.remove('active');
+        els.btnModeSpeak.classList.add('active');
+        els.pseudoInput.style.display = 'none';
+        els.speakInputArea.classList.add('active');
+      }
+    }
+
+    // --- Timer Logic ---
+    function formatTime(sec) {
+      const m = Math.floor(sec / 60).toString().padStart(2, '0');
+      const s = (sec % 60).toString().padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function startTimer() {
+      if (state.timerRunning) return;
+      state.timerRunning = true;
+      els.startTimerBtn.style.display = "none";
+      
+      state.timerInterval = setInterval(() => {
+        state.timerRemaining--;
+        els.timerVal.innerText = formatTime(state.timerRemaining);
+        
+        if (state.timerRemaining <= 0) {
+          clearInterval(state.timerInterval);
+          state.timerDone = true;
+          state.screen = "solving";
+          updateScreen();
+        }
+      }, 1000);
+    }
+
+    function toggleAccordion(id) {
+      const el = document.getElementById(id);
+      const span = el.previousElementSibling.querySelector('span');
+      if (el.classList.contains('open')) {
+        el.classList.remove('open');
+        span.innerText = '▾';
+      } else {
+        el.classList.add('open');
+        span.innerText = '▴';
+      }
+    }
+
+    // --- Audio Recording Logic (Speak Mode) ---
+    els.micRecordBtn.addEventListener('mousedown', startRecording);
+    els.micRecordBtn.addEventListener('mouseup', stopRecording);
+    els.micRecordBtn.addEventListener('touchstart', startRecording);
+    els.micRecordBtn.addEventListener('touchend', stopRecording);
+    
+    // Also support click to toggle
+    els.micRecordBtn.addEventListener('click', (e) => {
+      // Prevent double trigger if mouse/touch events already fired
+      if(e.detail === 0) return; 
+      if(state.isRecording) stopRecording();
+      else startRecording();
+    });
+
+    async function startRecording() {
+      if (state.isRecording) return;
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        state.mediaRecorder = new MediaRecorder(stream);
+        state.audioChunks = [];
+        
+        state.mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) state.audioChunks.push(e.data);
+        };
+        
+        state.mediaRecorder.onstop = async () => {
+          const audioBlob = new Blob(state.audioChunks, { type: 'audio/wav' });
+          els.micStatus.innerText = "Transcribing...";
+          els.micRecordBtn.disabled = true;
+          
+          try {
+            const transcript = await transcribeAudio(audioBlob);
+            els.micStatus.innerText = "Generating pseudocode...";
+            const prompt = `You are a pseudocode assistant. The student has verbally explained their approach.
+Convert their explanation into a clean numbered pseudocode outline.
+Rules:
+- High-level steps only, no runnable code
+- Maximum 8 steps
+- Language of response: ${state.language.code}
+- Output ONLY the numbered pseudocode, nothing else`;
+            
+            const pseudocode = await chat(prompt, transcript);
+            els.pseudoInput.value = (els.pseudoInput.value + "\n\n" + pseudocode).trim();
+            setThinkMode('type'); // switch back to type to let them edit
+          } catch (e) {
+            console.error(e);
+            alert("Failed to process speech.");
+          }
+          
+          els.micStatus.innerText = "Click to start recording";
+          els.micRecordBtn.disabled = false;
+        };
+        
+        state.mediaRecorder.start();
+        state.isRecording = true;
+        els.micRecordBtn.classList.add('recording');
+        els.micStatus.innerText = "Recording... click to stop";
+      } catch (err) {
+        alert("Microphone access denied or error occurred.");
+      }
+    }
+
+    function stopRecording() {
+      if (!state.isRecording || !state.mediaRecorder) return;
+      state.mediaRecorder.stop();
+      state.isRecording = false;
+      els.micRecordBtn.classList.remove('recording');
+      // Stop all tracks
+      state.mediaRecorder.stream.getTracks().forEach(t => t.stop());
+    }
+
+
+    // --- Hints Logic ---
+    async function toggleHint(level) {
+      const idx = level - 1;
+      const contentEl = document.getElementById(`hint${level}-content`);
+      const wrapEl = document.getElementById(`hint${level}-wrap`);
+      const arrowEl = document.getElementById(`hint${level}-arrow`);
+      
+      if (state.hintsVisible[idx]) {
+        // close it
+        state.hintsVisible[idx] = false;
+        contentEl.classList.remove('open');
+        wrapEl.classList.remove('open');
+        arrowEl.innerText = '▾';
+        return;
+      }
+      
+      // open it
+      state.hintsVisible[idx] = true;
+      contentEl.classList.add('open');
+      wrapEl.classList.add('open');
+      arrowEl.innerText = '▴';
+      
+      // fetch if not loaded
+      if (!state.hints[idx]) {
+        contentEl.innerHTML = `<div class="spinner" style="border-top-color: var(--blue);"></div>`;
+        const sysPrompt = `You are a DSA coach. Never give the full solution or working code.
+Respond ONLY in the language matching locale: ${state.language.code}
+Problem: ${state.problem.title}
+Description: ${state.problem.description}`;
+
+        let userMsg = "";
+        if (level === 1) userMsg = "Give a Level 1 hint. Ask ONE guiding question that helps the student think about the problem. Do not name any technique or data structure.";
+        if (level === 2) userMsg = "Give a Level 2 hint. Point the student toward the right technique or data structure without explaining how to implement it. 2-3 sentences max.";
+        if (level === 3) userMsg = "Give a Level 3 hint. Write a numbered pseudocode outline (5-7 steps max). High-level only — no runnable code, no syntax.";
+
+        try {
+          const res = await chat(sysPrompt, userMsg);
+          state.hints[idx] = res;
+          contentEl.innerText = res;
+        } catch (e) {
+          contentEl.innerText = "Failed to load hint.";
+          state.hintsVisible[idx] = false; // reset so they can try again
+        }
+      }
+    }
+
+    async function playHintAudio(level) {
+      const idx = level - 1;
+      if (!state.hints[idx]) return;
+      const btn = document.getElementById(`listen-btn-${level}`);
+      btn.disabled = true;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = `<div class="spinner"></div>`;
+      
+      try {
+        await speak(state.hints[idx]);
+      } catch (e) {
+        console.error(e);
+      }
+      
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+
+
+    // --- Code Review Logic ---
+    async function reviewCode() {
+      state.codeInput = els.codeInput.value.trim();
+      if (!state.codeInput) return alert("Please enter some code first.");
+
+      els.reviewBtn.disabled = true;
+      els.reviewBtn.innerHTML = `<div class="spinner"></div> Reviewing...`;
+      els.reviewOutput.classList.add('hidden');
+
+      const sysPrompt = `You are a DSA code reviewer. Do NOT provide a corrected or full solution.
+Respond ONLY in the language matching locale: ${state.language.code}
+Problem: ${state.problem.title}
+Description: ${state.problem.description}`;
+
+      const userMsg = `Review this student's code:
+
+${state.codeInput}
+
+Respond in this exact JSON structure:
+{
+  "assessment": "Is the logic correct? Brief explanation.",
+  "edgeCases": "What edge cases might be missed?",
+  "complexity": "Likely time complexity and why.",
+  "isOptimal": true or false,
+  "tip1": "First improvement tip (only if isOptimal is false, else empty string)",
+  "tip2": "Second improvement tip (only if isOptimal is false, else empty string)"
+}
+Output ONLY valid JSON, no markdown fences.`;
+
+      try {
+        const rawRes = await chat(sysPrompt, userMsg);
+        
+        let parsed = null;
+        try {
+          // strip markdown code blocks if any
+          let cleaned = rawRes.replace(/```json/gi, '').replace(/```/g, '').trim();
+          parsed = JSON.parse(cleaned);
+        } catch (e) {
+          throw new Error("Failed to parse JSON: " + rawRes);
+        }
+
+        state.reviewResult = parsed;
+        renderReviewResult();
+
+      } catch (e) {
+        console.error(e);
+        alert("Failed to review code. Please try again.");
+      }
+
+      els.reviewBtn.disabled = false;
+      els.reviewBtn.innerHTML = `Check My Approach`;
+    }
+
+    function renderReviewResult() {
+      const r = state.reviewResult;
+      els.reviewOutput.classList.remove('hidden');
+      
+      let html = `
+        <div class="review-result">
+          <div class="review-section">
+            <div class="review-title">✅ Logic Assessment</div>
+            <p class="review-text">${r.assessment}</p>
+          </div>
+          <div class="review-section">
+            <div class="review-title">⚠️ Edge Cases</div>
+            <p class="review-text">${r.edgeCases}</p>
+          </div>
+          <div class="review-section">
+            <div class="review-title">⏱ Complexity</div>
+            <p class="review-text">${r.complexity}</p>
+          </div>
+          <button class="btn-blue" onclick="playFullReview()" id="btn-play-review" style="margin-top: 16px;">🔊 Listen to Full Review</button>
+      `;
+
+      if (r.isOptimal === false || r.isOptimal === "false") {
+        html += `<div class="divider"></div>`;
+        if (r.tip1) {
+          html += `
+            <div class="review-section">
+              <div class="review-title">💡 Tip 1 — Make It Better</div>
+              <p class="review-text">${r.tip1}</p>
+              <button class="btn-blue" onclick="playTip(1)" id="btn-play-tip1" style="margin-top: 8px; padding: 6px 12px; font-size: 0.85rem;">🔊 Listen to Tip 1</button>
+            </div>
+          `;
+        }
+        if (r.tip2) {
+          html += `
+            <div class="review-section">
+              <div class="review-title">💡 Tip 2 — Make It Better</div>
+              <p class="review-text">${r.tip2}</p>
+              <button class="btn-blue" onclick="playTip(2)" id="btn-play-tip2" style="margin-top: 8px; padding: 6px 12px; font-size: 0.85rem;">🔊 Listen to Tip 2</button>
+            </div>
+          `;
+        }
+      }
+
+      html += `</div>`;
+      els.reviewOutput.innerHTML = html;
+    }
+
+    async function playFullReview() {
+      const r = state.reviewResult;
+      if (!r) return;
+      const btn = document.getElementById('btn-play-review');
+      const orig = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<div class="spinner"></div>`;
+      
+      const text = `${r.assessment}. ${r.edgeCases}. ${r.complexity}`;
+      try { await speak(text); } catch(e){}
+      
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
+
+    async function playTip(num) {
+      const r = state.reviewResult;
+      if (!r) return;
+      const text = num === 1 ? r.tip1 : r.tip2;
+      if (!text) return;
+
+      const btn = document.getElementById(`btn-play-tip${num}`);
+      const orig = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<div class="spinner"></div>`;
+      
+      try { await speak(text); } catch(e){}
+      
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
+
+
+    // --- API Helpers ---
+    async function speak(text) {
+      const response = await fetch(SARVAM_TTS_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-subscription-key": SARVAM_API_KEY
+        },
+        body: JSON.stringify({
+          inputs: [text],
+          target_language_code: state.language.code,
+          speaker: "meera",
+          model: SARVAM_TTS_MODEL,
+          enable_preprocessing: true
+        })
+      });
+      const data = await response.json();
+      if(!data.audios || !data.audios[0]) throw new Error("No audio returned");
+      const audio = new Audio("data:audio/wav;base64," + data.audios[0]);
+      audio.play();
+    }
+
+    async function transcribeAudio(audioBlob) {
+      const formData = new FormData();
+      formData.append("file", audioBlob, "recording.wav");
+      formData.append("language_code", state.language.code);
+      formData.append("model", "saarika:v2");
+
+      const response = await fetch(SARVAM_STT_URL, {
+        method: "POST",
+        headers: { "api-subscription-key": SARVAM_API_KEY },
+        body: formData
+      });
+      const data = await response.json();
+      if(!data.transcript) throw new Error("No transcript returned");
+      return data.transcript;
+    }
+
+    async function chat(systemPrompt, userMessage) {
+      const response = await fetch(SARVAM_CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-subscription-key": SARVAM_API_KEY
+        },
+        body: JSON.stringify({
+          model: SARVAM_MODEL,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user",   content: userMessage }
+          ],
+          max_tokens: 600
+        })
+      });
+      const data = await response.json();
+      if(!data.choices || !data.choices[0]) throw new Error("No chat response");
+      return data.choices[0].message.content;
+    }
+
+    // Run
+    init();
+
+  </script>
+</body>
+</html>

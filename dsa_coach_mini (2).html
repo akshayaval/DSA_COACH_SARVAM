@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSA Coach Mini</title>
+<style>
+:root {
+  --bg:        #0a0a0a;
+  --surface:   #141414;
+  --surface2:  #1e1e1e;
+  --border:    #2a2a2a;
+  --text:      #f5f5f5;
+  --muted:     #6b7280;
+  --blue:      #2563eb;
+  --blue-hover:#1d4ed8;
+  --green:     #16a34a;
+  --yellow:    #ca8a04;
+  --red:       #dc2626;
+  --locked-bg: #111111;
+  --locked-text: #374151;
+  --radius:    8px;
+  --font:      system-ui, -apple-system, sans-serif;
+  --mono:      'Courier New', monospace;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); margin: 0; }
+#app { max-width: 1100px; margin: 0 auto; padding: 24px 20px 80px; }
+
+/* ---------- Top bar ---------- */
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+.logo { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; }
+
+/* ---------- Language pills ---------- */
+.lang-toggle { display: flex; gap: 4px; }
+.lang-pill {
+  padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border);
+  cursor: pointer; font-size: 0.8rem; background: var(--surface2); color: var(--muted);
+}
+.lang-pill.active { background: var(--blue); color: white; border-color: var(--blue); }
+
+/* ---------- Problem cards (select screen) ---------- */
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px 24px; margin-bottom: 14px; cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.card:hover { border-color: var(--blue); transform: translateY(-1px); }
+.card h2 { margin: 0 0 6px; font-size: 1.25rem; }
+.card p  { color: var(--muted); margin: 0 0 10px; font-size: 0.9rem; line-height: 1.45; }
+
+/* ---------- Badges ---------- */
+.badge { padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; display: inline-block; margin-right: 6px; }
+.badge-topic  { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+.badge-easy   { background: #14532d; color: #4ade80; }
+.badge-medium { background: #713f12; color: #fbbf24; }
+
+/* ---------- Problem bar ---------- */
+.problem-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
+  padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.problem-bar h1 { font-size: 1.3rem; margin: 0; flex: 1; min-width: 160px; }
+.back-link { color: var(--muted); cursor: pointer; text-decoration: none; font-size: 0.9rem; }
+.back-link:hover { color: var(--text); }
+
+/* ---------- Panels ---------- */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 20px; }
+.panel h3 { margin: 0 0 10px; font-size: 1.05rem; }
+.panel p  { line-height: 1.6; margin: 0 0 6px; }
+.example-block {
+  font-family: var(--mono); font-size: 0.85rem; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 14px; white-space: pre-wrap; margin: 8px 0;
+}
+
+/* ---------- Textareas ---------- */
+textarea {
+  width: 100%; background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 14px; font-size: 0.95rem; resize: vertical;
+}
+textarea:focus { outline: none; border-color: var(--blue); }
+#pseudocode { min-height: 140px; font-family: var(--font); }
+#code-input { min-height: 260px; font-family: var(--mono); line-height: 1.6; }
+
+/* ---------- Input mode buttons ---------- */
+.mode-buttons { display: flex; gap: 8px; margin-bottom: 10px; }
+.mode-btn {
+  padding: 6px 14px; border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--surface2); color: var(--muted); cursor: pointer; font-size: 0.85rem;
+}
+.mode-btn.active { background: var(--blue); color: white; border-color: var(--blue); }
+
+/* ---------- Mic ---------- */
+.mic-btn {
+  width: 72px; height: 72px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text); font-size: 1.8rem; cursor: pointer;
+  display: block; margin: 14px auto 4px;
+}
+.mic-label { text-align: center; color: var(--muted); font-size: 0.85rem; margin: 6px 0 8px; }
+@keyframes pulse-red { 0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.7); } 50% { box-shadow: 0 0 0 10px rgba(220,38,38,0); } }
+.recording { animation: pulse-red 1s infinite; background: var(--red) !important; }
+
+/* ---------- Timer ---------- */
+.timer-section { text-align: center; padding: 30px 20px; }
+.timer-display {
+  font-size: 5rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: var(--blue); text-align: center; letter-spacing: 0.05em; line-height: 1.1;
+}
+.timer-sub { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+
+/* ---------- Blue button ---------- */
+.btn-blue {
+  background: var(--blue); color: white; border: none; border-radius: var(--radius);
+  padding: 10px 20px; cursor: pointer; font-size: 1rem; transition: background 0.15s;
+}
+.btn-blue:hover { background: var(--blue-hover); }
+.btn-blue:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---------- Coach / Code panels ---------- */
+.panels { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 860px) { .panels { grid-template-columns: 1fr; } }
+.coach-panel, .code-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 20px; position: relative; min-height: 320px;
+}
+.panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.panel-head h3 { margin: 0; font-size: 1.05rem; }
+
+/* ---------- Locked state ---------- */
+.panel-locked { pointer-events: none; opacity: 0.35; filter: grayscale(1); position: relative; }
+.panel-locked::after {
+  content: "🔒"; position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%); font-size: 3rem; opacity: 1; filter: none;
+}
+
+/* ---------- Hint cards ---------- */
+.hint-card { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; background: var(--surface2); }
+.hint-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; cursor: pointer; user-select: none; }
+.hint-header:hover { border-color: var(--blue); }
+.hint-title { font-size: 0.9rem; font-weight: 600; }
+.hint-body { padding: 4px 14px 14px; font-size: 0.9rem; line-height: 1.55; color: #e5e5e5; white-space: pre-wrap; }
+
+/* ---------- Listen button ---------- */
+.listen-btn {
+  background: var(--surface); border: 1px solid var(--border); color: var(--text);
+  border-radius: 16px; padding: 4px 12px; font-size: 0.8rem; cursor: pointer; margin-left: 8px;
+}
+.listen-btn:hover { border-color: var(--blue); }
+.listen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---------- Review output ---------- */
+.review-block { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 14px; text-align: left; }
+.review-item { margin-bottom: 14px; }
+.review-item h4 { margin: 0 0 4px; font-size: 0.95rem; }
+.review-item p  { margin: 0; font-size: 0.88rem; line-height: 1.55; color: #e5e5e5; white-space: pre-wrap; }
+
+.note { font-size: 0.8rem; color: #fbbf24; margin: 0 0 10px; }
+.status-msg { font-size: 0.85rem; color: var(--muted); margin-top: 8px; min-height: 1.2em; }
+.status-msg.error-msg { color: var(--red); }
+
+/* ---------- Spinner ---------- */
+.spinner {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+  vertical-align: -2px; margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Notes accordion ---------- */
+details.notes { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); margin-bottom: 20px; }
+details.notes summary { padding: 12px 16px; cursor: pointer; font-weight: 600; font-size: 0.95rem; }
+details.notes .notes-body { padding: 0 16px 14px; font-size: 0.9rem; white-space: pre-wrap; color: #e5e5e5; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+
+/* ================= API CONFIG ================= */
+const SARVAM_API_KEY  = "sk_a3efbt4b_x7IBjBn2xHpCbDUPARQUU8lS";
+const SARVAM_CHAT_URL = "https://api.sarvam.ai/v1/chat/completions";
+const SARVAM_TTS_URL  = "https://api.sarvam.ai/text-to-speech";
+const SARVAM_STT_URL  = "https://api.sarvam.ai/speech-to-text";
+const SARVAM_MODEL     = "sarvam-105b-conversations"; // "sarvam-m" is deprecated; this is the verified replacement
+const SARVAM_TTS_MODEL = "bulbul:v3";
+
+/* ================= DATA ================= */
+const PROBLEMS = [
+  {
+    id: "two-sum",
+    title: "Two Sum",
+    topic: "Array",
+    difficulty: "Easy",
+    description: "Given an array of integers and a target, return the indices of the two numbers that add up to the target. Assume exactly one solution exists.",
+    examples: [
+      { input: "nums = [2,7,11,15], target = 9", output: "[0,1]" },
+      { input: "nums = [3,2,4], target = 6",      output: "[1,2]" }
+    ]
+  },
+  {
+    id: "reverse-array",
+    title: "Reverse an Array",
+    topic: "Array",
+    difficulty: "Easy",
+    description: "Given an array, return it reversed in-place.",
+    examples: [
+      { input: "[1,2,3,4,5]", output: "[5,4,3,2,1]" },
+      { input: "[1]",          output: "[1]" }
+    ]
+  },
+  {
+    id: "reverse-linked-list",
+    title: "Reverse a Linked List",
+    topic: "Linked List",
+    difficulty: "Medium",
+    description: "Given the head of a singly linked list, reverse it and return the new head.",
+    examples: [
+      { input: "1→2→3→4→5", output: "5→4→3→2→1" },
+      { input: "1→2",        output: "2→1" }
+    ]
+  }
+];
+
+const LANGUAGES = [
+  { code: "en-IN", label: "English", short: "EN" },
+  { code: "hi-IN", label: "हिंदी",   short: "HI" },
+  { code: "te-IN", label: "తెలుగు",  short: "TE" }
+];
+
+const TIMER_SECONDS = 30;
+
+/* ================= STATE ================= */
+let state = {
+  screen: "select",          // "select" | "thinking" | "solving"
+  problem: null,             // selected PROBLEMS entry
+  language: LANGUAGES[0],    // active language object
+  mode: "type",              // "type" | "speak"
+  pseudocode: "",            // textarea content
+  timerRemaining: TIMER_SECONDS,
+  timerRunning: false,
+  timerStart: 0,
+  timerDone: false,
+  hints: [null, null, null],          // fetched hint text, by index
+  hintsVisible: [false, false, false],
+  hintsLoading: [false, false, false],
+  hintsLang: null,           // language code hints were fetched in
+  codeInput: "",
+  reviewResult: null,        // { assessment, edgeCases, complexity, isOptimal, tip1, tip2 }
+  reviewLoading: false,
+  isRecording: false,
+  processRecording: true,
+  mediaRecorder: null,
+  audioChunks: []
+};
+
+let timerInterval = null;
+
+const app = document.getElementById("app");
+const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const fmt = (s) => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+
+/* ================= API HELPERS ================= */
+
+async function chat(systemPrompt, userMessage) {
+  const response = await fetch(SARVAM_CHAT_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "api-subscription-key": SARVAM_API_KEY
+    },
+    body: JSON.stringify({
+      model: SARVAM_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user",   content: userMessage }
+      ],
+      max_tokens: 600
+    })
+  });
+  if (!response.ok) throw new Error("Chat API error " + response.status);
+  const data = await response.json();
+  const content = data.choices[0].message.content;
+  if (!content || !content.trim()) throw new Error("The model returned an empty response. Please try again.");
+  return content;
+}
+
+async function speak(text, btn) {
+  if (!text || !text.trim()) return;
+  const orig = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.innerHTML = "🔊 …"; }
+  try {
+    const response = await fetch(SARVAM_TTS_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-subscription-key": SARVAM_API_KEY
+      },
+      body: JSON.stringify({
+        inputs: [text],
+        target_language_code: state.language.code,
+        speaker: "priya", // verified bulbul:v3 speaker
+        model: SARVAM_TTS_MODEL,
+        enable_preprocessing: true
+      })
+    });
+    if (!response.ok) throw new Error("TTS API error " + response.status);
+    const data = await response.json();
+    const audio = new Audio("data:audio/wav;base64," + data.audios[0]);
+    await audio.play();
+  } catch (e) {
+    alert("Audio playback failed: " + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+  }
+}
+
+async function transcribeAudio(audioBlob) {
+  const formData = new FormData();
+  formData.append("file", audioBlob, "recording.wav");
+  formData.append("language_code", state.language.code);
+  formData.append("model", "saaras:v3"); // "saarika:v2" is deprecated; this is the verified replacement
+  const response = await fetch(SARVAM_STT_URL, {
+    method: "POST",
+    headers: { "api-subscription-key": SARVAM_API_KEY },
+    body: formData
+  });
+  if (!response.ok) throw new Error("Speech-to-text error " + response.status);
+  const data = await response.json();
+  return data.transcript;
+}
+
+/* ================= SHARED UI ================= */
+
+function langPillsHtml() {
+  return '<div class="lang-toggle">' + LANGUAGES.map(l =>
+    '<button class="lang-pill ' + (l.code === state.language.code ? "active" : "") +
+    '" onclick="setLanguage(\'' + l.code + '\')">' + l.label + '</button>'
+  ).join("") + '</div>';
+}
+
+function difficultyBadgeHtml(p) {
+  return '<span class="badge ' + (p.difficulty === "Easy" ? "badge-easy" : "badge-medium") + '">' + esc(p.difficulty) + '</span>';
+}
+
+function problemBarHtml(p) {
+  return '<div class="problem-bar">' +
+    '<span class="back-link" onclick="resetAll()">← Back</span>' +
+    '<h1>' + esc(p.title) + '</h1>' +
+    '<span class="badge badge-topic">' + esc(p.topic) + '</span>' +
+    difficultyBadgeHtml(p) +
+    langPillsHtml() +
+    '</div>';
+}
+
+/* ================= SCREEN 1 — PROBLEM SELECT ================= */
+
+function renderSelect() {
+  app.innerHTML =
+    '<div class="topbar">' +
+      '<div class="logo">DSA Coach</div>' +
+      langPillsHtml() +
+    '</div>' +
+    '<h2 style="color:var(--muted);font-size:1rem;font-weight:500;margin:0 0 18px">Pick a problem to begin</h2>' +
+    PROBLEMS.map((p, i) =>
+      '<div class="card" onclick="selectProblem(' + i + ')">' +
+        '<h2>' + esc(p.title) + '</h2>' +
+        '<p>' + esc(p.description) + '</p>' +
+        '<div><span class="badge badge-topic">' + esc(p.topic) + '</span>' + difficultyBadgeHtml(p) + '</div>' +
+      '</div>'
+    ).join("");
+}
+
+function selectProblem(i) {
+  state.problem = PROBLEMS[i];
+  state.screen = "thinking";
+  state.mode = "type";
+  state.pseudocode = "";
+  state.timerRemaining = TIMER_SECONDS;
+  state.timerRunning = false;
+  state.timerDone = false;
+  state.hints = [null, null, null];
+  state.hintsVisible = [false, false, false];
+  state.hintsLoading = [false, false, false];
+  state.hintsLang = null;
+  state.codeInput = "";
+  state.reviewResult = null;
+  state.reviewLoading = false;
+  render();
+}
+
+function resetAll() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  if (state.isRecording) {
+    try { if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") state.mediaRecorder.stop(); } catch (e) {}
+    state.isRecording = false;
+  }
+  selectProblemReset();
+}
+
+function selectProblemReset() {
+  state.screen = "select";
+  state.problem = null;
+  state.mode = "type";
+  state.pseudocode = "";
+  state.timerRemaining = TIMER_SECONDS;
+  state.timerRunning = false;
+  state.timerDone = false;
+  state.hints = [null, null, null];
+  state.hintsVisible = [false, false, false];
+  state.hintsLoading = [false, false, false];
+  state.hintsLang = null;
+  state.codeInput = "";
+  state.reviewResult = null;
+  state.reviewLoading = false;
+  render();
+}
+
+/* ================= SCREEN 2 — THINKING MODE ================= */
+
+function renderThinking() {
+  const p = state.problem;
+  app.innerHTML =
+    problemBarHtml(p) +
+
+    '<div class="panel">' +
+      '<h3>Problem</h3>' +
+      '<p>' + esc(p.description) + '</p>' +
+      p.examples.map(ex =>
+        '<div class="example-block">Input:  ' + esc(ex.input) + '\nOutput: ' + esc(ex.output) + '</div>'
+      ).join("") +
+    '</div>' +
+
+    '<div class="panel">' +
+      '<div class="mode-buttons">' +
+        '<button class="mode-btn ' + (state.mode === "type" ? "active" : "") + '" onclick="setMode(\'type\')">✏️ Type</button>' +
+        '<button class="mode-btn ' + (state.mode === "speak" ? "active" : "") + '" onclick="setMode(\'speak\')">🎙️ Speak</button>' +
+      '</div>' +
+      (state.mode === "speak" ? micHtml() : "") +
+      '<textarea id="pseudocode" placeholder="Write your approach, pseudocode, or notes here...">' + esc(state.pseudocode) + '</textarea>' +
+      '<div id="voice-status" class="status-msg"></div>' +
+    '</div>' +
+
+    '<div class="panel timer-section">' +
+      '<h3 style="margin:0 0 4px">Thinking Timer</h3>' +
+      '<div class="timer-sub" style="margin-bottom:10px">Coach and Code unlock when the timer ends</div>' +
+      '<div class="timer-display" id="timer-display">' + fmt(state.timerRemaining) + '</div>' +
+      '<div id="timer-btn-wrap" style="margin-top:14px;min-height:42px">' +
+        (state.timerRunning || state.timerDone ? "" : '<button class="btn-blue" onclick="startTimer()">Start Timer</button>') +
+      '</div>' +
+    '</div>' +
+
+    /* Locked preview of the panels that unlock at timer end — visible from across the room */
+    '<div class="panels">' +
+      '<div class="coach-panel panel-locked">' +
+        '<div class="panel-head"><h3>🤖 Coach</h3></div>' +
+        '<div class="hint-card"><div class="hint-header"><span class="hint-title">Level 1 — Concept</span></div></div>' +
+        '<div class="hint-card"><div class="hint-header"><span class="hint-title">Level 2 — Direction</span></div></div>' +
+        '<div class="hint-card"><div class="hint-header"><span class="hint-title">Level 3 — Pseudocode</span></div></div>' +
+      '</div>' +
+      '<div class="code-panel panel-locked">' +
+        '<div class="panel-head"><h3>💻 Code</h3></div>' +
+        '<textarea placeholder="Write or paste your solution here..." disabled></textarea>' +
+        '<button class="btn-blue" style="width:100%;margin-top:12px" disabled>Check My Approach</button>' +
+      '</div>' +
+    '</div>';
+
+  const ta = document.getElementById("pseudocode");
+  ta.addEventListener("input", () => { state.pseudocode = ta.value; });
+}
+
+function setMode(m) {
+  state.mode = m;
+  if (m !== "speak" && state.isRecording) {
+    stopRecording(false);
+  }
+  renderThinking();
+}
+
+/* ---------- Voice input ---------- */
+
+function micHtml() {
+  return '<div style="text-align:center">' +
+    '<button class="mic-btn ' + (state.isRecording ? "recording" : "") + '" id="mic-btn" onclick="toggleRecording()">' +
+      (state.isRecording ? "⏹️" : "🎙️") +
+    '</button>' +
+    '<div class="mic-label" id="mic-label">' +
+      (state.isRecording ? "Recording... click to stop" : "Click the mic and explain your approach") +
+    '</div>' +
+  '</div>';
+}
+
+function setRecordingUI(on) {
+  const btn = document.getElementById("mic-btn");
+  const lbl = document.getElementById("mic-label");
+  if (!btn) return;
+  btn.classList.toggle("recording", on);
+  btn.textContent = on ? "⏹️" : "🎙️";
+  if (lbl) lbl.textContent = on ? "Recording... click to stop" : "Click the mic and explain your approach";
+}
+
+async function toggleRecording() {
+  if (state.isRecording) {
+    stopRecording(true);
+    return;
+  }
+  const status = document.getElementById("voice-status");
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mr = new MediaRecorder(stream);
+    state.mediaRecorder = mr;
+    state.audioChunks = [];
+    state.processRecording = true;
+    mr.ondataavailable = (e) => { if (e.data.size > 0) state.audioChunks.push(e.data); };
+    mr.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      const shouldProcess = state.processRecording;
+      state.isRecording = false;
+      state.processRecording = true;
+      if (shouldProcess) {
+        await handleRecording(new Blob(state.audioChunks, { type: mr.mimeType || "audio/webm" }));
+      }
+    };
+    mr.start();
+    state.isRecording = true;
+    setRecordingUI(true);
+    if (status) { status.classList.remove("error-msg"); status.textContent = ""; }
+  } catch (e) {
+    state.isRecording = false;
+    if (status) { status.classList.add("error-msg"); status.textContent = "Microphone unavailable: " + e.message; }
+  }
+}
+
+function stopRecording(process) {
+  state.processRecording = !!process;
+  state.isRecording = false;
+  setRecordingUI(false);
+  try {
+    if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") state.mediaRecorder.stop();
+  } catch (e) {}
+}
+
+async function handleRecording(blob) {
+  const status = document.getElementById("voice-status");
+  const setMsg = (t, err) => {
+    if (!status) return;
+    status.classList.toggle("error-msg", !!err);
+    status.textContent = t;
+  };
+  try {
+    setMsg("Transcribing your speech...");
+    const transcript = await transcribeAudio(blob);
+    if (!transcript || !transcript.trim()) {
+      setMsg("No speech detected — try again.", true);
+      return;
+    }
+    setMsg("Structuring into pseudocode...");
+    const sys = "You are a pseudocode assistant. The student has verbally explained their approach.\n" +
+      "Convert their explanation into a clean numbered pseudocode outline.\n" +
+      "Rules:\n" +
+      "- High-level steps only, no runnable code\n" +
+      "- Maximum 8 steps\n" +
+      "- Language of response: " + state.language.code + "\n" +
+      "- Output ONLY the numbered pseudocode, nothing else";
+    const result = await chat(sys, transcript);
+    state.pseudocode = result.trim();
+    const ta = document.getElementById("pseudocode");
+    if (ta) ta.value = state.pseudocode;
+    setMsg("Done — edit the outline below if you like.");
+  } catch (e) {
+    setMsg("Voice input failed: " + e.message, true);
+  }
+}
+
+/* ---------- Timer ---------- */
+
+function startTimer() {
+  state.timerRunning = true;
+  state.timerStart = Date.now();
+  const wrap = document.getElementById("timer-btn-wrap");
+  if (wrap) wrap.innerHTML = "";
+  timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - state.timerStart) / 1000);
+    const remaining = Math.max(0, TIMER_SECONDS - elapsed);
+    state.timerRemaining = remaining;
+    const el = document.getElementById("timer-display");
+    if (el) el.textContent = fmt(remaining);
+    if (remaining <= 0) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      state.timerRunning = false;
+      state.timerDone = true;   // the ONLY unlock condition
+      state.screen = "solving";
+      render();
+    }
+  }, 250);
+}
+
+/* ================= SCREEN 3 — SOLVING MODE ================= */
+
+const HINT_NAMES = ["Level 1 — Concept", "Level 2 — Direction", "Level 3 — Pseudocode"];
+
+function renderSolving() {
+  const p = state.problem;
+  const langNote = (state.hintsLang && state.hintsLang !== state.language.code)
+    ? '<div class="note">⚠ Hints were loaded in a different language (' + esc(state.hintsLang) +
+      '). They are not auto-reloaded — refresh the page or pick the problem again for hints in ' +
+      esc(state.language.code) + '.</div>'
+    : "";
+
+  app.innerHTML =
+    problemBarHtml(p) +
+
+    '<details class="notes">' +
+      '<summary>📝 Your Notes (pseudocode)</summary>' +
+      '<div class="notes-body">' +
+        (state.pseudocode ? esc(state.pseudocode) : '<span style="color:var(--muted)">No notes were written.</span>') +
+      '</div>' +
+    '</details>' +
+
+    '<div class="panels">' +
+
+      /* ---------- LEFT: Coach ---------- */
+      '<div class="coach-panel">' +
+        '<div class="panel-head"><h3>🤖 Coach</h3>' + langPillsHtml() + '</div>' +
+        langNote +
+        [0, 1, 2].map(i => hintCardHtml(i)).join("") +
+      '</div>' +
+
+      /* ---------- RIGHT: Code ---------- */
+      '<div class="code-panel">' +
+        '<div class="panel-head"><h3>💻 Code</h3></div>' +
+        '<textarea id="code-input" placeholder="Write or paste your solution here...">' + esc(state.codeInput) + '</textarea>' +
+        '<button class="btn-blue" id="check-btn" style="width:100%;margin-top:12px" onclick="checkMyApproach()"' +
+          (state.reviewLoading ? " disabled" : "") + '>' +
+          (state.reviewLoading ? '<span class="spinner"></span> Reviewing...' : 'Check My Approach') +
+        '</button>' +
+        '<div id="review-output">' + reviewHtml(state.reviewResult) + '</div>' +
+      '</div>' +
+
+    '</div>';
+
+  const ta = document.getElementById("code-input");
+  ta.addEventListener("input", () => { state.codeInput = ta.value; });
+}
+
+/* ---------- Hints ---------- */
+
+function hintCardHtml(i) {
+  const visible = state.hintsVisible[i];
+  const loading = state.hintsLoading[i];
+  const hint = state.hints[i];
+  let body = "";
+  if (loading) body = '<span class="spinner"></span> Fetching hint...';
+  else if (hint) body = esc(hint);
+  return '<div class="hint-card">' +
+    '<div class="hint-header" onclick="toggleHint(' + i + ')">' +
+      '<span class="hint-title">' + HINT_NAMES[i] + ' &nbsp;▾</span>' +
+      '<button class="listen-btn" ' + (hint ? "" : "disabled") +
+        ' onclick="event.stopPropagation(); listenHint(' + i + ', this)">🔊 Listen</button>' +
+    '</div>' +
+    '<div class="hint-body" ' + (visible ? "" : "hidden") + '>' + body + '</div>' +
+  '</div>';
+}
+
+async function toggleHint(i) {
+  state.hintsVisible[i] = !state.hintsVisible[i];
+  if (state.hintsVisible[i] && state.hints[i] == null && !state.hintsLoading[i]) {
+    state.hintsLoading[i] = true;
+    renderSolving();
+    try {
+      state.hints[i] = await fetchHintText(i + 1);
+      if (!state.hintsLang) state.hintsLang = state.language.code;
+    } catch (e) {
+      state.hints[i] = null;
+      state.hintsVisible[i] = false;
+      alert("Could not load hint: " + e.message);
+    }
+    state.hintsLoading[i] = false;
+  }
+  renderSolving();
+}
+
+async function fetchHintText(level) {
+  const p = state.problem;
+  const sys = "You are a DSA coach. Never give the full solution or working code.\n" +
+    "Respond ONLY in the language matching locale: " + state.language.code + "\n" +
+    "Problem: " + p.title + "\n" +
+    "Description: " + p.description;
+  let user;
+  if (level === 1) {
+    user = "Give a Level 1 hint. Ask ONE guiding question that helps the student think about the problem. Do not name any technique or data structure.";
+  } else if (level === 2) {
+    user = "Give a Level 2 hint. Point the student toward the right technique or data structure without explaining how to implement it. 2-3 sentences max.";
+  } else {
+    user = "Give a Level 3 hint. Write a numbered pseudocode outline (5-7 steps max). High-level only — no runnable code, no syntax.";
+  }
+  return (await chat(sys, user)).trim();
+}
+
+function listenHint(i, btn) {
+  speak(state.hints[i], btn);
+}
+
+/* ---------- Code review ---------- */
+
+function reviewHtml(r) {
+  if (!r) return "";
+  let h = '<div class="review-block">' +
+    '<div class="review-item"><h4>✅ Logic Assessment</h4><p>' + esc(r.assessment) + '</p></div>' +
+    '<div class="review-item"><h4>⚠️ Edge Cases</h4><p>' + esc(r.edgeCases) + '</p></div>' +
+    '<div class="review-item"><h4>⏱ Complexity</h4><p>' + esc(r.complexity) + '</p></div>' +
+    '<button class="listen-btn" onclick="listenReview(this)">🔊 Listen to Full Review</button>';
+  if (r.isOptimal === false) {
+    h += '<div class="review-item" style="margin-top:16px"><h4>💡 Tip 1 — Make It Better</h4><p>' + esc(r.tip1) + '</p></div>' +
+      '<button class="listen-btn" onclick="listenTip(1, this)">🔊 Listen to Tip 1</button>' +
+      '<div class="review-item" style="margin-top:16px"><h4>💡 Tip 2 — Make It Better</h4><p>' + esc(r.tip2) + '</p></div>' +
+      '<button class="listen-btn" onclick="listenTip(2, this)">🔊 Listen to Tip 2</button>';
+  }
+  h += '</div>';
+  return h;
+}
+
+async function checkMyApproach() {
+  const ta = document.getElementById("code-input");
+  if (ta) state.codeInput = ta.value;
+  if (!state.codeInput.trim()) {
+    alert("Write or paste some code first.");
+    return;
+  }
+  state.reviewLoading = true;
+  renderSolving();
+  try {
+    const p = state.problem;
+    const sys = "You are a DSA code reviewer. Do NOT provide a corrected or full solution.\n" +
+      "Respond ONLY in the language matching locale: " + state.language.code +
+      ". Every JSON string value MUST be written in that language's native script.\n" +
+      "Problem: " + p.title + "\n" +
+      "Description: " + p.description;
+    const user = "Review this student's code:\n\n" + state.codeInput + "\n\n" +
+      'Respond in this exact JSON structure (keys in English, values in the active language):\n' +
+      '{\n' +
+      '  "assessment": "Is the logic correct? Brief explanation.",\n' +
+      '  "edgeCases": "What edge cases might be missed?",\n' +
+      '  "complexity": "Likely time complexity and why.",\n' +
+      '  "isOptimal": true or false,\n' +
+      '  "tip1": "First improvement tip (only if isOptimal is false, else empty string)",\n' +
+      '  "tip2": "Second improvement tip (only if isOptimal is false, else empty string)"\n' +
+      '}\n' +
+      'Output ONLY valid JSON, no markdown fences.';
+    const raw = await chat(sys, user);
+    state.reviewResult = parseReview(raw);
+  } catch (e) {
+    alert("Could not parse the review. Please try again.\n" + e.message);
+  }
+  state.reviewLoading = false;
+  renderSolving();
+}
+
+function parseReview(raw) {
+  let t = String(raw).trim();
+  t = t.replace(/^```(json)?\s*/i, "").replace(/```\s*$/, "").trim();
+  const s = t.indexOf("{");
+  const e = t.lastIndexOf("}");
+  if (s >= 0 && e > s) t = t.slice(s, e + 1);
+  const obj = JSON.parse(t);
+  if (typeof obj.isOptimal === "string") {
+    obj.isOptimal = obj.isOptimal.trim().toLowerCase() === "true";
+  }
+  return obj;
+}
+
+function listenReview(btn) {
+  const r = state.reviewResult;
+  if (!r) return;
+  const text = (r.assessment || "") + " " + (r.edgeCases || "") + " " + (r.complexity || "");
+  speak(text.trim(), btn);
+}
+
+function listenTip(n, btn) {
+  const r = state.reviewResult;
+  if (!r) return;
+  speak(n === 1 ? r.tip1 : r.tip2, btn);
+}
+
+/* ================= LANGUAGE ================= */
+
+function setLanguage(code) {
+  if (state.isRecording) stopRecording(false);
+  const lang = LANGUAGES.find(l => l.code === code);
+  if (lang) state.language = lang;
+  render();
+}
+
+/* ================= RENDER ================= */
+
+function render() {
+  if (state.screen === "select") renderSelect();
+  else if (state.screen === "thinking") renderThinking();
+  else if (state.screen === "solving") renderSolving();
+}
+
+render();
+</script>
+</body>
+</html>
